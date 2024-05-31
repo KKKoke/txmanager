@@ -1,4 +1,4 @@
-package com.kkkoke.txmanager;
+package com.kkkoke.txmanager.netty;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;

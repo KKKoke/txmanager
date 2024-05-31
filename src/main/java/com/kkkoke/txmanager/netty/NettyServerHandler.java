@@ -1,7 +1,9 @@
-package com.kkkoke.txmanager;
+package com.kkkoke.txmanager.netty;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.kkkoke.txmanager.constant.CommandType;
+import com.kkkoke.txmanager.constant.TransactionProperty;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -61,16 +63,16 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
 
         JSONObject jsonObject = JSON.parseObject((String) msg);
 
-        String command = jsonObject.getString("command"); // create-创建事务，register-注册分支事务
-        String groupId = jsonObject.getString("groupId"); // 事务组id
-        String transactionStatus = jsonObject.getString("transactionStatus"); // 分支事务类型，commit-提交，rollback-回滚
-        Integer transactionCount = jsonObject.getInteger("transactionCount"); // 分支事务数量
-        Boolean isEnd = jsonObject.getBoolean("isEnd"); // 是否是最后一个分支事务
+        String command = jsonObject.getString(TransactionProperty.COMMAND); // create-创建事务，register-注册分支事务
+        String groupId = jsonObject.getString(TransactionProperty.GROUP_ID); // 事务组id
+        String transactionStatus = jsonObject.getString(TransactionProperty.TRANSACTION_STATUS); // 分支事务类型，commit-提交，rollback-回滚
+        Integer transactionCount = jsonObject.getInteger(TransactionProperty.TRANSACTION_COUNT); // 分支事务数量
+        Boolean isEnd = jsonObject.getBoolean(TransactionProperty.IS_END); // 是否是最后一个分支事务
 
-        if ("create".equals(command)) {
+        if (CommandType.CREATE.equals(command)) {
             // 创建事务组
             transactionStatusMap.put(groupId, new ArrayList<>());
-        } else if ("register".equals(command)) {
+        } else if (CommandType.REGISTER.equals(command)) {
             // 加入事务组
             transactionStatusMap.get(groupId).add(transactionStatus);
 
@@ -80,14 +82,15 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
             }
 
             JSONObject result = new JSONObject();
-            result.put("groupId", groupId);
+            result.put(TransactionProperty.GROUP_ID, groupId);
+
             // 如果已经接收到结束事务的标记，比较事务是否已经全部到达，如果已经全部到达则看是否需要回滚
             if (isEndMap.get(groupId) && transactionCountMap.get(groupId).equals(transactionStatusMap.get(groupId).size())) {
-                if (transactionStatusMap.get(groupId).contains("rollback")) {
-                    result.put("command", "rollback");
+                if (transactionStatusMap.get(groupId).contains(CommandType.ROLLBACK)) {
+                    result.put(TransactionProperty.COMMAND, CommandType.ROLLBACK);
                     sendResult(result);
                 } else {
-                    result.put("command", "commit");
+                    result.put(TransactionProperty.COMMAND, CommandType.COMMIT);
                     sendResult(result);
                 }
             }
